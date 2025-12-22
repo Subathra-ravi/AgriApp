@@ -8,7 +8,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // MQTT SETUP
-const client = mqtt.connect("mqtt://broker.hivemq.com");
+const client = mqtt.connect("https://unpkg.com/mqtt/dist/mqtt.min.js");
 
 client.on("connect", () => {
   console.log("✅ MQTT Connected");
@@ -21,42 +21,61 @@ client.on("connect", () => {
 
 let sensorData = { voltage: 0, current: 0 };
 let motorStatus = "OFF";
+let sensorData = {
+  R: { voltage: 231.1, current: 0.04 },
+  Y: { voltage: 231.4, current: 0.04 },
+  B: { voltage: 96.9,  current: 0.00 }
+};
+client.on("connect", () => {
+  client.subscribe("agrisensex/sensor/1");
+});
+
 
 // MQTT MESSAGE HANDLER
-
 client.on("message", (topic, message) => {
-  const msg = message.toString();
+  const msg = JSON.parse(message.toString());
 
   if (topic === "agrisensex/sensor/1") {
-    try {
-      sensorData = JSON.parse(msg);
-    } catch (err) {
-      console.error("❌ Sensor JSON parse error");
-    }
-  }
-
-  if (topic === "agrisensex/motor/1/status") {
-    motorStatus = msg;
+    sensorData = {
+      R: { voltage: msg.R.voltage, current: msg.R.current },
+      Y: { voltage: msg.Y.voltage, current: msg.Y.current },
+      B: { voltage: msg.B.voltage, current: msg.B.current }
+    };
   }
 });
+
 
 app.get("/api/sensor", (req, res) => {
   res.json(sensorData);
 });
 
-app.get("/api/motor-status", (req, res) => {
-  res.json({ status: motorStatus });
+app.get("/api/motor-status/:id", (req, res) => {
+  const id = req.params.id;
+
+  res.json({
+    status: motors[id] || "OFF"
+  });
 });
+
+let motors = {
+  1: "OFF"
+};
 
 app.post("/api/motor", (req, res) => {
   const { motor, state } = req.body;
 
-  const topic = `agrisensex/motor/${motor}/cmd`;
-  client.publish(topic, state);
+  motors[motor] = state;   // ✅ UPDATE STATUS
 
-  console.log(`➡ Motor ${motor} command: ${state}`);
+  console.log(`Motor ${motor} turned ${state}`);
+
   res.json({ success: true });
 });
+
+
+app.get("/api/sensor", (req, res) => {
+  res.json(sensorData);
+});
+
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
