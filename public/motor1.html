@@ -7,11 +7,9 @@
 
 <style>
 body {
-    text-align: center;
     margin: 0;
     background: #2f2f2f;
     font-family: Arial, sans-serif;
-    color: black;
 }
 
 /* Header */
@@ -21,12 +19,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom-left-radius: 20px;
-    border-bottom-right-radius: 20px;
-}
-
-.header h1 {
-    margin: 0;
+    color: white;
 }
 
 /* Card */
@@ -37,39 +30,36 @@ body {
     padding: 15px;
 }
 
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+th {
+    background: #f0f0f0;
+}
+
 /* Buttons */
-.btn-on {
-    background: red;
-    color: white;
-    padding: 10px 25px;
-    border-radius: 8px;
+.btn {
+    padding: 8px 20px;
+    border-radius: 6px;
     border: none;
-    font-size: 18px;
-}
-
-.btn-off {
-    background: green;
-    color: white;
-    padding: 10px 25px;
-    border-radius: 8px;
-    border: none;
-    font-size: 18px;
-}
-
-/* Home icon */
-.home {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #0F8A5F;
-    width: 55px;
-    height: 55px;
-    border-radius: 12px;
-    font-size: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 16px;
+    margin: 5px;
     cursor: pointer;
+}
+.green { background: green; color: white; }
+.red { background: red; color: white; }
+.blue { background: #0F8A5F; color: white; }
+
+input {
+    width: 80px;
+    padding: 5px;
 }
 </style>
 </head>
@@ -79,70 +69,120 @@ body {
 <!-- Header -->
 <div class="header">
     <img src="logo.png" width="40">
-    <h1>Motor 1</h1>
+    <h2>Motor 1</h2>
     <img src="motor.png" width="40">
 </div>
 
-<!-- Voltage & Current -->
+<!-- PHASE TABLE -->
 <div class="card">
-    <h3>Voltage & Current</h3>
+    <h3>Phase Status</h3>
 
-    <p>
-        Voltage: <span id="voltage">0</span> V
-    </p>
-
-    <p>
-        Current: <span id="current">0</span> A
-    </p>
+    <table>
+        <tr>
+            <th>Phase</th>
+            <th>Voltage (V)</th>
+            <th>Current (A)</th>
+        </tr>
+        <tr>
+            <td>R</td>
+            <td id="vR">0</td>
+            <td id="cR">0</td>
+        </tr>
+        <tr>
+            <td>Y</td>
+            <td id="vY">0</td>
+            <td id="cY">0</td>
+        </tr>
+        <tr>
+            <td>B</td>
+            <td id="vB">0</td>
+            <td id="cB">0</td>
+        </tr>
+    </table>
 </div>
 
-
-<!-- Threshold -->
+<!-- THRESHOLD -->
 <div class="card">
     <h3>Threshold Setting</h3>
-    Voltage: <input type="number" value="230"><br><br>
-    Current: <input type="number" value="1"><br><br>
-    <button>Edit</button>
-    <button>Update</button>
-    <p>Status: <b style="color:green">Safe</b></p>
+
+    Voltage:
+    <input type="number" id="tVoltage" value="230" disabled><br><br>
+
+    Current:
+    <input type="number" id="tCurrent" value="1" disabled><br><br>
+
+    <button class="btn blue" onclick="enableEdit()">EDIT</button>
+    <button class="btn green" onclick="updateThreshold()">UPDATE</button>
+
+    <p>Status: <b id="safetyStatus" style="color:green">Safe</b></p>
 </div>
 
-<!-- Motor control -->
+<!-- MOTOR CONTROL -->
 <div class="card">
     <h3>Motor Control</h3>
-    <button class="btn-on" onclick="motorControl('ON')">ON</button>
-    <button class="btn-off" onclick="motorControl('OFF')">OFF</button>
 
-    <script>
-    function motorControl(state) {
-    fetch("/api/motor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ motor: 1, state })
-        });
-    }
-    </script>
+    <button class="btn green" onclick="motorControl('ON')">ON</button>
+    <button class="btn red" onclick="motorControl('OFF')">OFF</button>
 
+    <p>Motor Status: <b id="motorStatus">OFF</b></p>
 </div>
 
-<!-- Home button -->
-<div class="home" onclick="goHome()">🏠</div>
-
 <script>
-function goHome() {
-    window.location.href = "device.html";
+/* ===== ENABLE EDIT ===== */
+function enableEdit() {
+    document.getElementById("tVoltage").disabled = false;
+    document.getElementById("tCurrent").disabled = false;
 }
-</script>
 
-<script>
-    setInterval(() => {
-        fetch("/api/sensor")
-        .then(res => res.json())
-        .then(data => {
-        document.getElementById("voltage").innerText = data.voltage;
-        document.getElementById("current").innerText = data.current;
-        });
-    }, 2000); // update every 2 sec
+/* ===== UPDATE THRESHOLD ===== */
+function updateThreshold() {
+    const voltage = document.getElementById("tVoltage").value;
+    const current = document.getElementById("tCurrent").value;
+
+    fetch("/api/threshold", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voltage, current })
+    });
+
+    document.getElementById("tVoltage").disabled = true;
+    document.getElementById("tCurrent").disabled = true;
+}
+
+/* ===== MOTOR CONTROL ===== */
+function motorControl(state) {
+  fetch("/api/motor", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ motor: 1, state })
+  }).then(() => {
+    document.getElementById("motorStatus").innerText = state;
+  });
+}
+
+
+/* ===== SENSOR UPDATE ===== */
+setInterval(() => {
+    fetch("/api/sensor")
+    .then(res => res.json())
+    .then(d => {
+        vR.innerText = d.R.voltage;
+        cR.innerText = d.R.current;
+
+        vY.innerText = d.Y.voltage;
+        cY.innerText = d.Y.current;
+
+        vB.innerText = d.B.voltage;
+        cB.innerText = d.B.current;
+    });
+}, 2000);
+
+/* ===== MOTOR STATUS ===== */
+setInterval(() => {
+    fetch("/api/motor-status/1")
+    .then(res => res.json())
+    .then(d => motorStatus.innerText = d.status);
+}, 1500);
 </script>
 
 </body>
