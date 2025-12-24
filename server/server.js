@@ -8,7 +8,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // MQTT SETUP
-const client = mqtt.connect("https://unpkg.com/mqtt/dist/mqtt.min.js");
+const client = mqtt.connect("wss://test.mosquitto.org:8081/mqtt");
 
 client.on("connect", () => {
   console.log("✅ MQTT Connected");
