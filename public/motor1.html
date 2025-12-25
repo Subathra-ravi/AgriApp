@@ -65,7 +65,7 @@ input {
 </head>
 
 <body>
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
 <!-- Header -->
 <div class="header">
     <img src="logo.png" width="40">
@@ -112,9 +112,13 @@ input {
     <input type="number" id="tCurrent" value="1" disabled><br><br>
 
     <button class="btn blue" onclick="enableEdit()">EDIT</button>
-    <button class="btn green" onclick="updateThreshold()">UPDATE</button>
+    <button class="btn green" id="updateBtn" onclick="updateThreshold()" disabled>
+        UPDATE
+    </button>
 
-    <p>Status: <b id="safetyStatus" style="color:green">Safe</b></p>
+    <p>Status:
+        <b id="safetyStatus" style="color:gray">Locked</b>
+    </p>
 </div>
 
 <!-- MOTOR CONTROL -->
@@ -130,14 +134,18 @@ input {
 <script>
 /* ===== ENABLE EDIT ===== */
 function enableEdit() {
-    document.getElementById("tVoltage").disabled = false;
-    document.getElementById("tCurrent").disabled = false;
+    tVoltage.disabled = false;
+    tCurrent.disabled = false;
+    updateBtn.disabled = false;
+
+    safetyStatus.innerText = "Edit mode";
+    safetyStatus.style.color = "orange";
 }
 
 /* ===== UPDATE THRESHOLD ===== */
 function updateThreshold() {
-    const voltage = document.getElementById("tVoltage").value;
-    const current = document.getElementById("tCurrent").value;
+    const voltage = tVoltage.value;
+    const current = tCurrent.value;
 
     fetch("/api/threshold", {
         method: "POST",
@@ -145,8 +153,12 @@ function updateThreshold() {
         body: JSON.stringify({ voltage, current })
     });
 
-    document.getElementById("tVoltage").disabled = true;
-    document.getElementById("tCurrent").disabled = true;
+    tVoltage.disabled = true;
+    tCurrent.disabled = true;
+    updateBtn.disabled = true;
+
+    safetyStatus.innerText = "Updated";
+    safetyStatus.style.color = "green";
 }
 
 /* ===== MOTOR CONTROL ===== */
@@ -155,11 +167,8 @@ function motorControl(state) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ motor: 1, state })
-  }).then(() => {
-    document.getElementById("motorStatus").innerText = state;
   });
 }
-
 
 /* ===== SENSOR UPDATE ===== */
 setInterval(() => {
@@ -175,14 +184,14 @@ setInterval(() => {
         vB.innerText = d.B.voltage;
         cB.innerText = d.B.current;
     });
-}, 2000);
+}, 1000);
 
 /* ===== MOTOR STATUS ===== */
 setInterval(() => {
     fetch("/api/motor-status/1")
     .then(res => res.json())
     .then(d => motorStatus.innerText = d.status);
-}, 1500);
+}, 1000);
 </script>
 
 </body>
